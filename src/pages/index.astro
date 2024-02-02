@@ -1,7 +1,6 @@
 ---
 import BaseHead from '../components/BaseHead.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
+import SvelteTest from '../components/SvelteTest.svelte';
 import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 ---
 
@@ -10,14 +9,8 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
   <head>
     <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
   </head>
-  <body class="flex flex-col min-h-[100vh] bg-base-200">
-    <Header title={SITE_TITLE} />
-    <main
-      class="flex-1 flex flex-col p-4 w-full max-w-screen-lg mx-auto my-auto box-border"
-    >
-      <h1>Hi!</h1>
-      <p>This is my website</p>
-    </main>
-    <Footer />
+  <body class="relative h-screen w-full overflow-hidden">
+    <!-- without client:load component would only be rendered on the server (no JS on the client and hence no state updates!) -->
+    <SvelteTest client:load />
   </body>
 </html>
