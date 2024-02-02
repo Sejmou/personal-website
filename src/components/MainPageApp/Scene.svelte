@@ -1,7 +1,7 @@
 <script>
   import { T, useTask } from '@threlte/core';
   import { springScrollPos } from './page-interaction';
-  import { pageCount } from './pages';
+  import { contentItemCount } from './Content/content';
 
   let rotation = 0;
   useTask(delta => {
@@ -20,7 +20,7 @@
 <T.DirectionalLight position={[0, 10, 10]} castShadow />
 
 <T.Mesh rotation.y={rotation} position.y={0.5} castShadow>
-  <T.BoxGeometry args={[1, pageCount - $springScrollPos, 1]} />
+  <T.BoxGeometry args={[1, $contentItemCount - $springScrollPos, 1]} />
   <T.MeshStandardMaterial color="hotpink" />
 </T.Mesh>
 

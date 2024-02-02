@@ -8,7 +8,8 @@
     springScrollPos,
   } from './page-interaction';
   import App from './App.svelte';
-  import { pageCount } from './pages';
+  import Content from './Content/Content.svelte';
+  import { contentItemCount } from './Content/content';
 
   const onScroll = () => {
     // get normalized scroll position in document. 0 should equal top of page, 1
@@ -51,41 +52,19 @@
   // springScrollPos.subscribe(pos => {
   //   console.log('springScrollPos', pos);
   // });
+
+  $: count = $contentItemCount;
 </script>
 
 <svelte:window on:scroll={onScroll} on:mousemove={onMouseMove} />
 
-<main class={`relative pointer-events-none h-[${pageCount}00vh]`}>
+<div class={`relative pointer-events-none h-[${count}00vh]`}>
   <div class="fixed left-0 top-0 h-[100lvh] w-screen">
     <App />
   </div>
-  <div
-    class={`relative pointer-events-auto p-6 mx-auto w-full max-w-screen-lg grid grid-cols-1 grid-rows-${pageCount} gap-4 h-full`}
+  <main
+    class={`relative pointer-events-auto p-6 mx-auto w-full max-w-screen-lg grid grid-cols-1 grid-rows-${count} gap-4 h-full`}
   >
-    {#each Array(pageCount) as _, i}
-      {#if i === 0}
-        <section>
-          <h1>Welcome!</h1>
-          <p>
-            This is my website! It is still a work in progress and I have no
-            idea what this will look like later.
-          </p>
-        </section>
-      {:else if i === 1}
-        <section>
-          <h2>Links</h2>
-          <ul class="list-disc list-inside">
-            <li><a class="link link-info link-hover" href="/blog">Blog</a></li>
-            <li>
-              <a class="link link-info link-hover" href="/about">About Me</a>
-            </li>
-          </ul>
-        </section>
-      {:else}
-        <section class="flex items-center justify-center">
-          <h2>Content Page {i}</h2>
-        </section>
-      {/if}
-    {/each}
-  </div>
-</main>
+    <Content />
+  </main>
+</div>
