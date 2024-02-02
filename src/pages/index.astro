@@ -1,6 +1,6 @@
 ---
 import BaseHead from '../components/BaseHead.astro';
-import SvelteTest from '../components/SvelteTest.svelte';
+import AppWrapper from '../components/MainPageApp/AppWrapper.svelte';
 import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 ---
 
@@ -9,8 +9,7 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
   <head>
     <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
   </head>
-  <body class="relative h-screen w-full overflow-hidden">
-    <!-- without client:load component would only be rendered on the server (no JS on the client and hence no state updates!) -->
-    <SvelteTest client:load />
+  <body>
+    <AppWrapper client:load />
   </body>
 </html>
