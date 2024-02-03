@@ -58,8 +58,8 @@ async function main() {
   });
 }
 
-function readDirectoryRecursively(directory) {
-  let files = [];
+function readDirectoryRecursively(directory: string) {
+  let files: string[] = [];
 
   readdirSync(directory).forEach(file => {
     const filePath = join(directory, file);
@@ -77,7 +77,7 @@ function readDirectoryRecursively(directory) {
 
 const execAsync = util.promisify(exec);
 
-async function executeCommand(command) {
+async function executeCommand(command: string) {
   try {
     const { stdout, stderr } = await execAsync(command);
     console.log('\nDone!\n');
@@ -88,7 +88,10 @@ async function executeCommand(command) {
   }
 }
 
-function askYesNoQuestion(question, callback) {
+function askYesNoQuestion(
+  question: string,
+  callback: (answer: boolean) => void
+) {
   rl.question(`${question} (Y/N): `, answer => {
     const normalizedAnswer = answer.trim().toLowerCase();
     if (normalizedAnswer === 'y' || normalizedAnswer === 'yes') {

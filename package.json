@@ -8,7 +8,7 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "import-gltf-model": "node import-gltf-model.js"
+    "import-gltf-model": "tsx import-gltf-model.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.4.1",
@@ -29,6 +29,7 @@
     "@iconify-json/mdi": "^1.1.64",
     "@tailwindcss/typography": "^0.5.10",
     "@types/three": "^0.161.2",
-    "daisyui": "^4.6.0"
+    "daisyui": "^4.6.0",
+    "tsx": "^4.7.0"
   }
 }
