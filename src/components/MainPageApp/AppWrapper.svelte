@@ -8,8 +8,7 @@
     springScrollPos,
   } from './page-interaction';
   import App from './App.svelte';
-  import Content from './Content/Content.svelte';
-  import { contentItemCount } from './Content/content';
+  import { items, contentItemCount } from './Content/content';
 
   const onScroll = () => {
     // get normalized scroll position in document. 0 should equal top of page, 1
@@ -58,13 +57,18 @@
 
 <svelte:window on:scroll={onScroll} on:mousemove={onMouseMove} />
 
-<div class={`relative pointer-events-none h-[${count}00vh]`}>
+<div class="relative pointer-events-none" style={`height: ${count}00vh;`}>
   <div class="fixed left-0 top-0 h-[100lvh] w-screen">
     <App />
   </div>
   <main
-    class={`relative pointer-events-auto p-6 mx-auto w-full max-w-screen-lg grid grid-cols-1 grid-rows-${count} gap-4 h-full`}
+    class="relative pointer-events-auto mx-auto w-full max-w-screen-lg grid grid-cols-1 h-full"
+    style={`grid-template-rows: repeat(${count}, minmax(0, 1fr));`}
   >
-    <Content />
+    {#each $items as item}
+      <section class="p-6">
+        <svelte:component this={item} />
+      </section>
+    {/each}
   </main>
 </div>
