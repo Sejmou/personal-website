@@ -1,8 +1,11 @@
-import { existsSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { promises as fs, existsSync } from 'fs';
 import { join } from 'path';
 import { exec } from 'child_process';
 import readline from 'readline';
 import util from 'util';
+
+// as we are using ES Module syntax, __dirname is undefined (I guess you never stop learning about weird JS BS lol)
+const __dirname = new URL('.', import.meta.url).pathname;
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -18,61 +21,107 @@ const rl = readline.createInterface({
  *
  * References to the file are updated in the component.
  */
-async function main() {
-  const outfolder = join(process.cwd(), 'public/models');
-  const infolder = join(process.cwd(), 'tmp');
-  if (!existsSync(infolder)) {
+async function main(gltfFile: string) {
+  // make sure the gltf file path is absolute
+  if (!gltfFile.startsWith('/')) {
+    gltfFile = join(__dirname, gltfFile);
+  }
+
+  const staticFilesDir = join(__dirname, 'public');
+  /**
+   * The directory where the .glb files for the models in this project are located (accessed by the client browser at runtime)
+   */
+  const modelGlbFilesDir = join(staticFilesDir, 'models');
+  if (!existsSync(modelGlbFilesDir)) {
+    // sync fs API has no recursive option - gotta love Node.js lol
+    fs.mkdir(modelGlbFilesDir, { recursive: true });
+  }
+
+  const appComponentsDir = join(__dirname, 'src', 'components', 'MainPageApp');
+  /**
+   * The directory where the Svelte components for the Threlte 3D models in this project are located
+   */
+  const modelComponentsDir = join(appComponentsDir, 'models');
+  if (!existsSync(modelComponentsDir)) {
+    await fs.mkdir(modelComponentsDir, { recursive: true });
+  }
+
+  /**
+   * A temporary directory for storing intermediate files created while running this script.
+   */
+  const tmpDir = join(__dirname, 'tmp', 'gltf-import');
+
+  if (!existsSync(tmpDir)) {
+    // sync fs API has no recursive option - gotta love Node.js lol
+    await fs.mkdir(tmpDir, { recursive: true });
+  }
+
+  // switch to the tmp directory
+  process.chdir(tmpDir);
+  const gltfConversionCmd = `npx @threlte/gltf@latest "${gltfFile}" --transform`;
+  await executeCommand(gltfConversionCmd);
+  // command should create two files in tmpDir:
+  // - a .glb file (with the same name as the .gltf file, but with the .glb extension instead of .gltf, and '-transformed' appended to the name)
+  // - a .svelte file (with the same name as the .gltf file, but with the .svelte extension instead of .gltf)
+  const originalFileNameNoExt = gltfFile.split('/').pop()!.split('.')[0];
+  const glbFile = join(tmpDir, `${originalFileNameNoExt}-transformed.glb`);
+  if (!existsSync(glbFile)) {
     throw new Error(
-      `Folder '${infolder}' does not exist. Create it and place your model files there.`
+      `'${glbFile}' should have been created at this point, but it hasn't. Cannot proceed, sorry.`
     );
   }
-  // cd into the infolder as otherwise output of the @threlte/gltf is placed in the root folder (couldn't figure out how to change that behavior; --output flag doesn't seem to work)
-  process.chdir(infolder);
-
-  if (!existsSync(outfolder)) {
-    mkdirSync(outfolder, { recursive: true });
-  }
-
-  const filepaths = readDirectoryRecursively(infolder);
-  const gltfFiles = filepaths.filter(fp => fp.endsWith('.gltf'));
-  if (gltfFiles.length > 1) {
+  const svelteFile = join(tmpDir, `${originalFileNameNoExt}.svelte`);
+  if (!existsSync(svelteFile)) {
     throw new Error(
-      `Multiple .gltf files found in '${infolder}'. Only one is supported by this script currently, sorry!`
-    );
-  }
-  const gltfFile = gltfFiles[0];
-
-  if (!gltfFile) {
-    throw new Error(
-      `No .gltf file found in '${infolder}'. Add one to import the contained model.`
+      `'${glbFile}' should have been created at this point, but it hasn't. Cannot proceed, sorry.`
     );
   }
 
-  const command = `npx @threlte/gltf@latest "${gltfFile}" --transform`;
-  console.log('this will execute:', command);
-  askYesNoQuestion('Continue?', async isConfirmed => {
-    if (isConfirmed) {
-      await executeCommand(command);
-    }
-    process.exit();
-  });
-}
+  // allow user to rename the output files
+  const userFilename = await askQuestion(
+    `The new component will be called ${originalFileNameNoExt}. Enter a new name if you wish, otherwise press Enter to keep the original name:`
+  );
+  const fileNameNoExt = userFilename || originalFileNameNoExt;
 
-function readDirectoryRecursively(directory: string) {
-  let files: string[] = [];
+  // the .glb file should be moved to the folder where the client can access it
+  const newGlbFile = join(modelGlbFilesDir, `${fileNameNoExt}.glb`);
+  if (
+    !existsSync(newGlbFile) ||
+    (await askYesNoQuestion(
+      `A file already exists at '${newGlbFile}'. Overwrite it?`
+    ))
+  ) {
+    // TIL: renaming and moving are the same thing
+    await fs.rename(glbFile, newGlbFile);
+  }
 
-  readdirSync(directory).forEach(file => {
-    const filePath = join(directory, file);
-    const stat = statSync(filePath);
+  // the .svelte file should reference the new location of the .glb file
+  // look for useGltf('/' followed by the original file name without extension, add 'models/' in front of the path
+  const svelteFileContent = await fs.readFile(svelteFile, 'utf8');
+  const newSvelteFileContent = svelteFileContent.replace(
+    //-transformed is added to the file name, so we need to remove it
+    `useGltf('/${originalFileNameNoExt}-transformed`,
+    `useGltf('/models/${fileNameNoExt}`
+  );
+  const newSvelteFile = join(`${modelComponentsDir}/${fileNameNoExt}.svelte`);
+  if (
+    !existsSync(newSvelteFile) ||
+    (await askYesNoQuestion(
+      `A file already exists at '${newSvelteFile}'. Overwrite it?`
+    ))
+  ) {
+    // write the new content to the new file
+    await fs.writeFile(newSvelteFile, newSvelteFileContent, 'utf8');
+  }
+  await fs.unlink(svelteFile);
 
-    if (stat.isDirectory()) {
-      files = files.concat(readDirectoryRecursively(filePath));
-    } else {
-      files.push(filePath);
-    }
-  });
+  if (newSvelteFileContent === svelteFileContent) {
+    console.warn(
+      `CAUTION: No references to the original .glb file found in '${svelteFile}'.\nYou will need to check and adjust '${newSvelteFile}' manually.`
+    );
+  }
 
-  return files;
+  process.exit();
 }
 
 const execAsync = util.promisify(exec);
@@ -80,29 +129,51 @@ const execAsync = util.promisify(exec);
 async function executeCommand(command: string) {
   try {
     const { stdout, stderr } = await execAsync(command);
-    console.log('\nDone!\n');
-    console.log(`stdout: ${stdout}\n`);
-    console.error(`stderr: ${stderr}`);
+    const stdOutTrimmed = stdout.trim();
+    if (stdOutTrimmed) console.log(stdOutTrimmed);
+    const stdErrTrimmed = stderr.trim();
+    if (stdErrTrimmed) console.error(stdErrTrimmed);
   } catch (error) {
-    console.error(`Error while executing: ${error}`);
+    console.error(error);
+    process.exit(1);
   }
 }
 
-function askYesNoQuestion(
-  question: string,
-  callback: (answer: boolean) => void
-) {
-  rl.question(`${question} (Y/N): `, answer => {
-    const normalizedAnswer = answer.trim().toLowerCase();
-    if (normalizedAnswer === 'y' || normalizedAnswer === 'yes') {
-      callback(true);
-    } else if (normalizedAnswer === 'n' || normalizedAnswer === 'no') {
-      callback(false);
-    } else {
-      console.log('Invalid input. Please enter Y or N.');
-      askYesNoQuestion(question, callback);
-    }
+async function askQuestion(question: string): Promise<string> {
+  return new Promise(resolve => {
+    rl.question(question, resolve);
   });
 }
 
-main();
+function askYesNoQuestion(question: string): Promise<boolean> {
+  return new Promise(resolve => {
+    rl.question(`${question} (Y/N): `, answer => {
+      const normalizedAnswer = answer.trim().toLowerCase();
+      if (normalizedAnswer === 'y' || normalizedAnswer === 'yes') {
+        resolve(true);
+      } else if (normalizedAnswer === 'n' || normalizedAnswer === 'no') {
+        resolve(false);
+      } else {
+        console.log('Invalid input. Please enter Y or N.');
+        resolve(askYesNoQuestion(question));
+      }
+    });
+  });
+}
+
+// read first passed argument (it should be the path to the file to process)
+const filepath = process.argv[2];
+
+if (!filepath) {
+  throw new Error(
+    'No file path provided. Please provide the path to the .gltf file you want to import.'
+  );
+}
+
+if (!existsSync(filepath)) {
+  throw new Error(
+    `No file found at '${filepath}'. Please provide the path to the .gltf file you want to import.`
+  );
+}
+
+main(filepath);

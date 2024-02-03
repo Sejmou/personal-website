@@ -1,7 +1,6 @@
 <script>
   import { T, useTask } from '@threlte/core';
-  import { springScrollPos } from './page-interaction';
-  import { contentItemCount } from './Content/content';
+  import Laptop from './models/laptop.svelte';
 
   let rotation = 0;
   useTask(delta => {
@@ -19,12 +18,4 @@
 
 <T.DirectionalLight position={[0, 10, 10]} castShadow />
 
-<T.Mesh rotation.y={rotation} position.y={0.5} castShadow>
-  <T.BoxGeometry args={[1, $contentItemCount - $springScrollPos, 1]} />
-  <T.MeshStandardMaterial color="hotpink" />
-</T.Mesh>
-
-<T.Mesh rotation.x={-Math.PI / 2} receiveShadow>
-  <T.CircleGeometry args={[4, 40]} />
-  <T.MeshStandardMaterial color="white" />
-</T.Mesh>
+<Laptop position={[0, 0, 0]} />
